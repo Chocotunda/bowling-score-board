@@ -1,0 +1,22 @@
+@use 'styles/variables' as *;
+
+.layout {
+  min-height: 100vh;
+  background-color: $color-background;
+  padding: $spacing-md-mobile;
+
+  @media (min-width: $breakpoint-sm) {
+    padding: $spacing-md;
+  }
+}
+
+.layout__container {
+  max-width: $container-max-width;
+  margin: $container-margin;
+  width: 100%;
+  padding: $spacing-sm-mobile;
+
+  @media (min-width: $breakpoint-sm) {
+    padding: $spacing-md;
+  }
+}

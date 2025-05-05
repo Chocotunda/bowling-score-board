@@ -1,0 +1,87 @@
+<div class="game">
+  <div class="game__scoreboard">
+    <h2>Player {{ playerNumber }}</h2>
+
+    <div class="game__frames">
+      @for (frame of frames; track $index; let i = $index) {
+        <div class="game__frame-container">
+          <div class="game__frame-header">{{ i + 1 }}</div>
+          <div
+            class="game__frame"
+            [class.game__frame--active]="i === gameState().game.currentFrameIndex"
+          >
+            <div
+              class="game__rolls"
+              [class.game__rolls--tenth]="frame.isTenthFrame && frame.rolls[2]"
+            >
+              <div class="game__roll">
+                {{ frame.rolls[0] ? (frame.rolls[0].pins === 10 ? 'X' : frame.rolls[0].pins) : '' }}
+              </div>
+              <div class="game__roll">
+                {{
+                  frame.rolls[1]
+                    ? frame.type === FrameType.Spare
+                      ? '/'
+                      : frame.rolls[1].pins === 10
+                        ? 'X'
+                        : frame.rolls[1].pins
+                    : ''
+                }}
+              </div>
+              @if (frame.isTenthFrame && frame.rolls[2]) {
+                <div class="game__roll">
+                  {{
+                    frame.rolls[2] ? (frame.rolls[2].pins === 10 ? 'X' : frame.rolls[2].pins) : ''
+                  }}
+                </div>
+              }
+            </div>
+            <div class="game__frame-total">{{ frame.total || '' }}</div>
+          </div>
+        </div>
+      }
+    </div>
+    <div class="game__info">
+      <div class="game__total-score">Total Score: {{ totalScore }}</div>
+      <div
+        class="game__status"
+        [class.game__status--completed]="gameState().game.status === GameStatus.Completed"
+      >
+        Status: {{ gameState().game.status }}
+      </div>
+      @if (lastRoll) {
+        <div class="game__last-roll">Last Roll: {{ lastRoll }}</div>
+      }
+      @if (lastFrameType) {
+        <div class="game__last-frame-type">Last Frame: {{ lastFrameType }}</div>
+      }
+    </div>
+  </div>
+
+  <div class="game__controls">
+    <div class="game__input-group">
+      <p-inputNumber
+        [formControl]="pinsControl"
+        [min]="0"
+        [max]="getMaxPins()"
+        [showButtons]="true"
+        buttonLayout="horizontal"
+        spinnerMode="horizontal"
+        placeholder="Enter pins (0-{{ getMaxPins() }})"
+        (onKeyUp.enter)="addManualRoll()"
+        inputId="pins-input"
+      ></p-inputNumber>
+      <p-button
+        label="Add Roll"
+        (onClick)="addManualRoll()"
+        [disabled]="isGameComplete || pinsControl.value === null || pinsControl.value === undefined"
+      ></p-button>
+    </div>
+    <p-button
+      label="Random Roll"
+      (onClick)="addRandomRoll()"
+      [disabled]="isGameComplete"
+    ></p-button>
+    <p-button label="Reset Game" (onClick)="resetGame()" severity="secondary"></p-button>
+  </div>
+</div>
