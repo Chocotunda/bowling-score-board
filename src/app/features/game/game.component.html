@@ -2,6 +2,34 @@
   <div class="game__scoreboard">
     <h2>{{ playerName$ | async }}</h2>
 
+    <div class="game__controls">
+      <div class="game__input-group">
+        <p-inputNumber
+          [formControl]="pinsControl"
+          [min]="0"
+          [max]="getMaxPins()"
+          [showButtons]="true"
+          buttonLayout="horizontal"
+          spinnerMode="horizontal"
+          placeholder="Enter pins (0-{{ getMaxPins() }})"
+          (onKeyUp.enter)="addManualRoll()"
+          inputId="pins-input"
+        ></p-inputNumber>
+        <p-button
+          label="Add Roll"
+          (onClick)="addManualRoll()"
+          [disabled]="
+            isGameComplete || pinsControl.value === null || pinsControl.value === undefined
+          "
+        ></p-button>
+      </div>
+      <p-button
+        label="Random Roll"
+        (onClick)="addRandomRoll()"
+        [disabled]="isGameComplete"
+      ></p-button>
+      <p-button label="Reset Game" (onClick)="resetGame()" severity="secondary"></p-button>
+    </div>
     <div class="game__frames">
       @for (frame of frames; track $index; let i = $index) {
         <div class="game__frame-container">
@@ -56,32 +84,5 @@
         <div class="game__last-frame-type">Last Frame: {{ lastFrameType }}</div>
       }
     </div>
-  </div>
-
-  <div class="game__controls">
-    <div class="game__input-group">
-      <p-inputNumber
-        [formControl]="pinsControl"
-        [min]="0"
-        [max]="getMaxPins()"
-        [showButtons]="true"
-        buttonLayout="horizontal"
-        spinnerMode="horizontal"
-        placeholder="Enter pins (0-{{ getMaxPins() }})"
-        (onKeyUp.enter)="addManualRoll()"
-        inputId="pins-input"
-      ></p-inputNumber>
-      <p-button
-        label="Add Roll"
-        (onClick)="addManualRoll()"
-        [disabled]="isGameComplete || pinsControl.value === null || pinsControl.value === undefined"
-      ></p-button>
-    </div>
-    <p-button
-      label="Random Roll"
-      (onClick)="addRandomRoll()"
-      [disabled]="isGameComplete"
-    ></p-button>
-    <p-button label="Reset Game" (onClick)="resetGame()" severity="secondary"></p-button>
   </div>
 </div>
