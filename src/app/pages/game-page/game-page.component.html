@@ -1,0 +1,8 @@
+<div class="game-page">
+  <h1>Bowling Game</h1>
+  <div class="game-page__players">
+    @for (player of players$ | async; track $index) {
+      <app-game [player]="player"></app-game>
+    }
+  </div>
+</div>

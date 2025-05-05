@@ -1,11 +1,36 @@
-import { Component, signal, computed, effect, Input, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  signal,
+  computed,
+  effect,
+  ChangeDetectionStrategy,
+  OnDestroy,
+  Input,
+  OnInit,
+} from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { FrameType } from '@/app/core/enums/frame-type.enum';
 import { GameStatus } from '@/app/core/enums/game-status.enum';
-import { GameState, Game, Frame, Roll } from '@/app/core/interfaces/bowling.interface';
+import {
+  GameState as BowlingGameState,
+  Game,
+  Frame,
+  Roll,
+} from '@/app/core/interfaces/bowling.interface';
+import { Store } from '@ngxs/store';
+import {
+  GameState as GameStoreState,
+  UpdatePlayerGameState,
+  UpdatePlayerRoll,
+  StartGame,
+  GameStateModel,
+  ResetGame,
+} from '@/app/core/state/game.state';
+import { Observable, Subject } from 'rxjs';
+import { takeUntil, map } from 'rxjs/operators';
 
 @Component({
   selector: 'app-game',
@@ -15,11 +40,16 @@ import { GameState, Game, Frame, Roll } from '@/app/core/interfaces/bowling.inte
   styleUrls: ['./game.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class GameComponent {
+export class GameComponent implements OnInit, OnDestroy {
   private readonly MAX_PINS = 10;
   private readonly MAX_FRAMES = 10;
+  private destroy$ = new Subject<void>();
+  private playerIndex: number = -1;
 
-  @Input() playerNumber!: number;
+  @Input() player!: { name: string; gameState: BowlingGameState };
+
+  gameStoreState$: Observable<GameStateModel>;
+  playerName$: Observable<string>;
 
   readonly FrameType = FrameType;
   readonly GameStatus = GameStatus;
@@ -28,8 +58,24 @@ export class GameComponent {
     nonNullable: false,
   });
 
-  readonly gameState = signal<GameState>({
-    game: this.initializeGame(),
+  readonly gameState = signal<BowlingGameState>({
+    game: {
+      frames: Array(this.MAX_FRAMES)
+        .fill(null)
+        .map((_, index) => ({
+          rolls: [],
+          score: 0,
+          total: 0,
+          type: FrameType.Open,
+          isComplete: false,
+          isTenthFrame: index === this.MAX_FRAMES - 1,
+        })),
+      currentFrameIndex: 0,
+      currentRollIndex: 0,
+      totalScore: 0,
+      status: GameStatus.InProgress,
+      isPerfectGame: false,
+    },
     lastRoll: 0,
     lastFrameType: null,
   });
@@ -65,7 +111,16 @@ export class GameComponent {
     return this.gameStatus().frames;
   }
 
-  constructor() {
+  constructor(private store: Store) {
+    this.gameStoreState$ = this.store
+      .select(GameStoreState.getState)
+      .pipe(takeUntil(this.destroy$));
+
+    this.playerName$ = this.gameStoreState$.pipe(
+      takeUntil(this.destroy$),
+      map(() => this.player?.name || ''),
+    );
+
     effect(() => {
       if (this.isGameComplete) {
         this.pinsControl.disable();
@@ -73,6 +128,35 @@ export class GameComponent {
         this.pinsControl.enable();
       }
     });
+  }
+
+  ngOnInit() {
+    if (!this.player) {
+      return;
+    }
+
+    if (this.player?.gameState) {
+      this.gameState.set(this.player.gameState);
+    }
+
+    // Subscribe to state updates after we have the player input
+    this.gameStoreState$
+      .pipe(
+        takeUntil(this.destroy$),
+        map(state => {
+          const index = state.players.findIndex(p => p.name === this.player?.name);
+          return index;
+        }),
+      )
+      .subscribe(index => {
+        this.playerIndex = index;
+      });
+  }
+
+  ngOnDestroy() {
+    this.store.dispatch(new ResetGame());
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   getMaxPins(): number {
@@ -112,11 +196,13 @@ export class GameComponent {
   }
 
   resetGame(): void {
-    this.gameState.set({
+    const newGameState = {
       game: this.initializeGame(),
       lastRoll: 0,
       lastFrameType: null,
-    });
+    };
+    this.gameState.set(newGameState);
+    this.store.dispatch(new StartGame());
   }
 
   private initializeGame(): Game {
@@ -317,19 +403,28 @@ export class GameComponent {
   }
 
   private addRoll(pins: number): void {
+    if (this.playerIndex === -1) {
+      return;
+    }
+
     const currentFrame = this.currentFrame;
 
     if (!this.isValidRoll(currentFrame, pins)) {
       return;
     }
 
+    const roll: Roll = { pins };
     const updatedFrame: Frame = {
       ...currentFrame,
-      rolls: [...currentFrame.rolls, { pins }],
+      rolls: [...currentFrame.rolls, roll],
     };
 
     updatedFrame.type = this.getFrameType(updatedFrame.rolls);
     updatedFrame.isComplete = this.isFrameComplete(updatedFrame);
+
+    this.store.dispatch(
+      new UpdatePlayerRoll(this.playerIndex, this.gameState().game.currentFrameIndex, roll),
+    );
 
     this.updateGameState(updatedFrame, pins);
   }
@@ -354,24 +449,39 @@ export class GameComponent {
   }
 
   private updateGameState(updatedFrame: Frame, pins: number): void {
+    if (this.playerIndex === -1) {
+      return;
+    }
+
     const currentState = this.gameState();
     const frames = [...currentState.game.frames];
     frames[currentState.game.currentFrameIndex] = updatedFrame;
 
     if (updatedFrame.isComplete) {
-      for (let i = 0; i <= currentState.game.currentFrameIndex; i++) {
-        if (this.canCalculateFrameScore(frames[i], frames.slice(i + 1))) {
-          frames[i].score = this.calculateFrameScore(frames[i], frames.slice(i + 1));
-          frames[i].total = (i > 0 ? frames[i - 1].total : 0) + frames[i].score;
+      // First, calculate scores for all frames up to the current frame
+      const updatedFrames: Frame[] = [];
+      frames.forEach((frame, i) => {
+        if (i <= currentState.game.currentFrameIndex) {
+          const canCalculate = this.canCalculateFrameScore(frame, frames.slice(i + 1));
+          const score = canCalculate ? this.calculateFrameScore(frame, frames.slice(i + 1)) : 0;
+          const previousTotal = i > 0 ? updatedFrames[i - 1]?.total || 0 : 0;
+          updatedFrames.push({
+            ...frame,
+            score,
+            // Only show total if we can calculate the complete score (including bonuses)
+            total: canCalculate ? previousTotal + score : 0,
+          });
+        } else {
+          updatedFrames.push(frame);
         }
-      }
+      });
 
-      const totalScore = frames[currentState.game.currentFrameIndex].total || 0;
+      const totalScore = updatedFrames[currentState.game.currentFrameIndex].total || 0;
 
-      this.gameState.set({
+      const newGameState = {
         game: {
           ...currentState.game,
-          frames,
+          frames: updatedFrames,
           totalScore,
           currentFrameIndex:
             currentState.game.currentFrameIndex < this.MAX_FRAMES - 1
@@ -385,9 +495,12 @@ export class GameComponent {
         },
         lastRoll: pins,
         lastFrameType: updatedFrame.type,
-      });
+      };
+
+      this.gameState.set(newGameState);
+      this.store.dispatch(new UpdatePlayerGameState(this.playerIndex, newGameState));
     } else {
-      this.gameState.set({
+      const newGameState = {
         game: {
           ...currentState.game,
           frames,
@@ -395,7 +508,10 @@ export class GameComponent {
         },
         lastRoll: pins,
         lastFrameType: updatedFrame.type,
-      });
+      };
+
+      this.gameState.set(newGameState);
+      this.store.dispatch(new UpdatePlayerGameState(this.playerIndex, newGameState));
     }
   }
 }

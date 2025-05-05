@@ -1,0 +1,43 @@
+<div class="welcome-container">
+  <h1 class="welcome-title">Welcome to Bowling Scoreboard</h1>
+  <p class="welcome-description">
+    Keep track of your bowling game scores with this interactive scoreboard!
+  </p>
+
+  <form [formGroup]="playerForm" class="players-container">
+    <div class="player-count-container">
+      <p-select
+        [options]="playerCountOptions"
+        formControlName="playerCount"
+        placeholder="Select number of players"
+        class="player-count-select"
+      ></p-select>
+
+      <p-button (click)="startGame()" class="start-game-button">
+        <i class="pi pi-play"></i>
+        Start Game
+      </p-button>
+    </div>
+    <div formArrayName="players">
+      @for (player of players.controls; track player; let i = $index) {
+        <div class="player-input" [formGroupName]="i">
+          <div class="input-group">
+            <input
+              type="text"
+              pInputText
+              formControlName="name"
+              [placeholder]="'Enter name for Player ' + (i + 1)"
+              class="player-name-input"
+              [ngClass]="{
+                'p-invalid': player.get('name')?.invalid && player.get('name')?.touched,
+              }"
+            />
+            @if (player.get('name')?.invalid && player.get('name')?.touched) {
+              <small class="p-error"> Name is required and must be at least 2 characters </small>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </form>
+</div>
