@@ -6,4 +6,8 @@ export const routes: Routes = [
     pathMatch: 'full',
     loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent),
   },
+  {
+    path: 'game',
+    loadComponent: () => import('./pages/game/game.component').then(m => m.GamePageComponent),
+  },
 ];

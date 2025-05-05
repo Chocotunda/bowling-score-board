@@ -1,0 +1,21 @@
+.welcome-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: 2rem;
+}
+
+.welcome-title {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: var(--primary-color);
+}
+
+.welcome-description {
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+  color: var(--text-color-secondary);
+}

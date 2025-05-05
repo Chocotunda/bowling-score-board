@@ -1,10 +1,12 @@
 import { Component } from '@angular/core';
-import { GameComponent } from '@/app/features/game/game.component';
+import { RouterModule } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
 
 @Component({
   selector: 'app-home',
   standalone: true,
   templateUrl: './home.component.html',
-  imports: [GameComponent],
+  styleUrls: ['./home.component.scss'],
+  imports: [RouterModule, ButtonModule],
 })
 export class HomeComponent {}
