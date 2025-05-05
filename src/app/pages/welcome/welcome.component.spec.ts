@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { HomeComponent } from './home.component';
+import { HomeComponent } from './welcome.component';
 import { GameComponent } from '@/app/features/game/game.component';
 
 describe('HomeComponent', () => {
