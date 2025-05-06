@@ -11,5 +11,5 @@ import { LayoutComponent } from './features/layout/layout.component';
   styleUrls: ['./app.component.scss'],
 })
 export class AppComponent {
-  title = 'bowling score board';
+  title = 'Bowling Scoreboard';
 }

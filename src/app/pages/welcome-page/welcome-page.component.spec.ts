@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WelcomeComponent } from './welcome-page.component';
 import { GameComponent } from '@/app/features/game/game.component';
+import { NgxsModule } from '@ngxs/store';
+import { GameState } from '@/app/core/state/game.state';
 
 describe('WelcomeComponent', () => {
   let component: WelcomeComponent;
@@ -8,7 +10,13 @@ describe('WelcomeComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [WelcomeComponent, GameComponent],
+      imports: [
+        WelcomeComponent,
+        GameComponent,
+        NgxsModule.forRoot([GameState], {
+          developmentMode: true,
+        }),
+      ],
     }).compileComponents();
   });
 

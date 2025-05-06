@@ -237,6 +237,7 @@
     gap: $spacing-sm-mobile;
     align-items: center;
     width: 100%;
+    gap: 16px;
 
     @media (min-width: $breakpoint-sm) {
       flex-direction: row;
