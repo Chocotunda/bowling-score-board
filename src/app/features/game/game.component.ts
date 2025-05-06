@@ -139,7 +139,6 @@ export class GameComponent implements OnInit, OnDestroy {
       this.gameState.set(this.player.gameState);
     }
 
-    // Subscribe to state updates after we have the player input
     this.gameStoreState$
       .pipe(
         takeUntil(this.destroy$),
@@ -458,7 +457,6 @@ export class GameComponent implements OnInit, OnDestroy {
     frames[currentState.game.currentFrameIndex] = updatedFrame;
 
     if (updatedFrame.isComplete) {
-      // First, calculate scores for all frames up to the current frame
       const updatedFrames: Frame[] = [];
       frames.forEach((frame, i) => {
         if (i <= currentState.game.currentFrameIndex) {
@@ -468,7 +466,6 @@ export class GameComponent implements OnInit, OnDestroy {
           updatedFrames.push({
             ...frame,
             score,
-            // Only show total if we can calculate the complete score (including bonuses)
             total: canCalculate ? previousTotal + score : 0,
           });
         } else {
